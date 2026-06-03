@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Skill Gap Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f12; --surface: #161a20; --surface2: #1e242d;
+    --border: #2a3040; --accent: #6ee7b7; --accent2: #818cf8;
+    --danger: #f87171; --warn: #fbbf24; --text: #e2e8f0;
+    --muted: #64748b; --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 1.2rem; font-weight: 600; color: var(--accent); }
+  .logo span { color: var(--accent2); }
+  .nav-links { display: flex; gap: 1rem; align-items: center; }
+  .nav-links button {
+    background: none; border: none; color: var(--muted);
+    font-family: var(--sans); font-size: 0.85rem; cursor: pointer;
+    padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.15s;
+  }
+  .nav-links button:hover { color: var(--text); background: var(--surface2); }
+  .nav-links button.active { color: var(--accent); }
+  #logoutBtn { color: var(--danger) !important; }
+  #userInfo { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); }
+  .page { display: none; }
+  .page.active { display: block; }
+  #authPage {
+    display: none; min-height: 100vh; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 30% 30%, #1a2535 0%, var(--bg) 70%);
+  }
+  #authPage.active { display: flex; }
+  .auth-card {
+    width: 100%; max-width: 420px; padding: 2.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  }
+  .auth-hero { text-align: center; margin-bottom: 2rem; }
+  .auth-hero h1 { font-size: 2rem; font-weight: 600; color: var(--accent); }
+  .auth-hero p { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+  .tab-row { display: flex; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .tab-btn {
+    flex: 1; padding: 0.6rem; background: none; border: none; color: var(--muted);
+    font-family: var(--sans); cursor: pointer; font-size: 0.9rem; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--surface2); color: var(--accent); }
+  .form-group { margin-bottom: 1rem; }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
+  input, textarea {
+    width: 100%; padding: 0.65rem 0.9rem;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--sans); font-size: 0.9rem;
+    outline: none; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 120px; }
+  .btn {
+    width: 100%; padding: 0.75rem; border-radius: 8px; border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 0.9rem; font-weight: 500; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #0d1f17; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.75rem; text-align: center; }
+  #analyzerPage { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  #historyPage { padding: 2rem; max-width: 900px; margin: 0 auto; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h2 { font-size: 1.8rem; font-weight: 500; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.3rem; }
+  .analyzer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media(max-width: 768px) { .analyzer-grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .card h3 { font-size: 0.85rem; color: var(--muted); font-family: var(--mono); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .analyze-btn {
+    display: block; max-width: 300px; margin: 0 auto 2rem;
+    padding: 0.75rem; border-radius: 8px; border: none; cursor: pointer;
+    background: var(--accent); color: #0d1f17; font-family: var(--sans);
+    font-size: 0.95rem; font-weight: 600; transition: all 0.15s; text-align: center;
+  }
+  .analyze-btn:hover { filter: brightness(1.1); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .loading { display: none; flex-direction: column; align-items: center; gap: 1rem; padding: 3rem; }
+  .loading.active { display: flex; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-family: var(--mono); font-size: 0.85rem; }
+  #resultsSection { display: none; }
+  #resultsSection.visible { display: block; }
+  .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  @media(max-width: 768px) { .results-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-label { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 2rem; font-weight: 600; margin: 0.25rem 0; font-family: var(--mono); }
+  .stat-value.green { color: var(--accent); }
+  .stat-value.red { color: var(--danger); }
+  .match-meter { height: 8px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin: 0.5rem 0; }
+  .match-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+  .skills-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  @media(max-width: 768px) { .skills-row { grid-template-columns: 1fr; } }
+  .skill-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  .skill-tag { padding: 0.3rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-family: var(--mono); border: 1px solid; }
+  .skill-tag.matched { background: rgba(110,231,183,0.1); border-color: var(--accent); color: var(--accent); }
+  .skill-tag.missing { background: rgba(248,113,113,0.1); border-color: var(--danger); color: var(--danger); }
+  .summary-box {
+    background: linear-gradient(135deg, rgba(110,231,183,0.05), rgba(129,140,248,0.05));
+    border: 1px solid rgba(110,231,183,0.2); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
+  }
+  .summary-label { font-size: 0.75rem; font-family: var(--mono); color: var(--accent); margin-bottom: 0.5rem; text-transform: uppercase; }
+  .summary-text { color: var(--text); font-size: 0.95rem; line-height: 1.7; }
+  .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+  .resource-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .resource-skill { font-size: 0.75rem; font-family: var(--mono); color: var(--accent2); text-transform: uppercase; margin-bottom: 4px; }
+  .resource-platform { font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; }
+  .resource-link { font-size: 0.8rem; color: var(--accent); text-decoration: none; word-break: break-all; }
+  .resource-link:hover { text-decoration: underline; }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.7rem; margin-top: 6px; }
+  .badge.free { background: rgba(110,231,183,0.15); color: var(--accent); }
+  .history-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; }
+  .history-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .history-item:hover { border-color: var(--accent2); }
+  .history-title { font-weight: 500; }
+  .history-meta { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); margin-top: 0.25rem; }
+  .history-pct { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; }
+  #toast {
+    position: fixed; bottom: 2rem; right: 2rem; padding: 0.75rem 1.25rem;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 999; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+  #toast.success { border-color: var(--accent); color: var(--accent); }
+  #toast.error { border-color: var(--danger); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- Auth Page -->
+<div id="authPage" class="page active">
+  <div class="auth-card">
+    <div class="auth-hero">
+      <h1>SkillGap<span>AI</span></h1>
+      <p>Paste a job description. See exactly what you're missing.</p>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" onclick="switchTab('register')">Register</button>
+    </div>
+    <div id="loginForm">
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
+      <button class="btn btn-primary" onclick="login()">Sign In →</button>
+      <div id="loginError" class="error-msg"></div>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="Your Name" /></div>
+      <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="regPassword" placeholder="Min 6 characters" /></div>
+      <button class="btn btn-primary" onclick="register()">Create Account →</button>
+      <div id="registerError" class="error-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- App Header -->
+<header id="appHeader" style="display:none">
+  <div class="logo">SkillGap<span>AI</span></div>
+  <div class="nav-links">
+    <span id="userInfo"></span>
+    <button onclick="showPage('analyzer')" id="navAnalyzer" class="active">Analyze</button>
+    <button onclick="showPage('history')" id="navHistory">History</button>
+    <button onclick="logout()" id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+<!-- Analyzer Page -->
+<div id="analyzerPage" class="page">
+  <div class="page-header">
+    <h2>Skill Gap Analyzer</h2>
+    <p>Paste your resume + job description to see your match score and learning path.</p>
+  </div>
+  <div class="analyzer-grid">
+    <div class="card">
+      <h3>Your Resume</h3>
+      <textarea id="resumeText" placeholder="Paste your resume text here..." rows="10"></textarea>
+    </div>
+    <div class="card">
+      <h3>Job Description</h3>
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label>Job Title (optional)</label>
+        <input type="text" id="jobTitle" placeholder="e.g. Backend Developer Intern" />
+      </div>
+      <textarea id="jobDescription" placeholder="Paste the job description here..." rows="8"></textarea>
+    </div>
+  </div>
+  <button class="analyze-btn" onclick="analyze()" id="analyzeBtn">⚡ Analyze My Skills</button>
+  <div class="loading" id="loadingSection">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing your skills...</div>
+  </div>
+  <div id="resultsSection">
+    <div class="results-grid">
+      <div class="stat-card">
+        <div class="stat-label">Match Score</div>
+        <div class="stat-value green" id="matchPct">-</div>
+        <div class="match-meter"><div class="match-fill" id="matchBar" style="width:0%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Skills Matched</div>
+        <div class="stat-value green" id="matchedCount">-</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">you already have</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Skills Missing</div>
+        <div class="stat-value red" id="missingCount">-</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">to learn</div>
+      </div>
+    </div>
+    <div class="summary-box">
+      <div class="summary-label">🤖 AI Career Coach</div>
+      <div class="summary-text" id="aiSummary"></div>
+    </div>
+    <div class="skills-row">
+      <div class="card">
+        <h3>✅ Matched Skills</h3>
+        <div class="skill-list" id="matchedSkills"></div>
+      </div>
+      <div class="card">
+        <h3>❌ Missing Skills</h3>
+        <div class="skill-list" id="missingSkills"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:2rem">
+      <h3>📚 Learning Resources</h3>
+      <div class="resource-grid" id="resourceGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- History Page -->
+<div id="historyPage" class="page">
+  <div class="page-header">
+    <h2>Analysis History</h2>
+    <p>Your past skill gap analyses</p>
+  </div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('sga_token');
+let userName = localStorage.getItem('sga_name');
+
+window.onload = () => { if (token) showApp(); else showAuth(); };
+
+function showAuth() {
+  document.getElementById('authPage').classList.add('active');
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('analyzerPage').classList.remove('active');
+  document.getElementById('historyPage').classList.remove('active');
+}
+
+function showApp() {
+  document.getElementById('authPage').classList.remove('active');
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('userInfo').textContent = userName || '';
+  showPage('analyzer');
+}
+
+function showPage(page) {
+  document.getElementById('analyzerPage').classList.remove('active');
+  document.getElementById('historyPage').classList.remove('active');
+  document.getElementById('navAnalyzer').classList.remove('active');
+  document.getElementById('navHistory').classList.remove('active');
+  if (page === 'analyzer') {
+    document.getElementById('analyzerPage').classList.add('active');
+    document.getElementById('navAnalyzer').classList.add('active');
+  } else {
+    document.getElementById('historyPage').classList.add('active');
+    document.getElementById('navHistory').classList.add('active');
+    loadHistory();
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+}
+
+async function register() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  document.getElementById('registerError').textContent = '';
+  try {
+    const res = await fetch(`${API}/auth/register`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, email, password})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Registration failed');
+    setSession(data); showApp();
+  } catch(e) { document.getElementById('registerError').textContent = e.message; }
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('loginError').textContent = '';
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Login failed');
+    setSession(data); showApp();
+  } catch(e) { document.getElementById('loginError').textContent = e.message; }
+}
+
+function setSession(data) {
+  token = data.token; userName = data.name;
+  localStorage.setItem('sga_token', token);
+  localStorage.setItem('sga_name', data.name);
+}
+
+function logout() {
+  token = null; userName = null;
+  localStorage.removeItem('sga_token');
+  localStorage.removeItem('sga_name');
+  showAuth();
+}
+
+async function analyze() {
+  const jobDescription = document.getElementById('jobDescription').value.trim();
+  const jobTitle = document.getElementById('jobTitle').value.trim();
+  const resumeText = document.getElementById('resumeText').value.trim();
+  if (!jobDescription) { showToast('Please enter a job description', 'error'); return; }
+  if (!resumeText) { showToast('Please enter your resume', 'error'); return; }
+  document.getElementById('loadingSection').classList.add('active');
+  document.getElementById('resultsSection').classList.remove('visible');
+  document.getElementById('analyzeBtn').disabled = true;
+  try {
+    const res = await fetch(`${API}/analysis/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+token},
+      body: JSON.stringify({resumeText, jobDescription, jobTitle: jobTitle||'Software Engineer'})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Analysis failed');
+    renderResults(data);
+    showToast('Analysis complete!', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+  finally {
+    document.getElementById('loadingSection').classList.remove('active');
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+function renderResults(data) {
+  document.getElementById('matchPct').textContent = data.matchPercentage + '%';
+  document.getElementById('matchedCount').textContent = (data.matchedSkills||[]).length;
+  document.getElementById('missingCount').textContent = (data.missingSkills||[]).length;
+  setTimeout(() => {
+    const fill = document.getElementById('matchBar');
+    const pct = data.matchPercentage || 0;
+    fill.style.width = pct + '%';
+    fill.style.background = pct>=70 ? 'var(--accent)' : pct>=40 ? 'var(--warn)' : 'var(--danger)';
+  }, 100);
+  document.getElementById('aiSummary').textContent = data.aiSummary || '';
+  document.getElementById('matchedSkills').innerHTML = (data.matchedSkills||[]).map(s =>
+    `<span class="skill-tag matched">${s}</span>`).join('') || '<span style="color:var(--muted)">None detected</span>';
+  document.getElementById('missingSkills').innerHTML = (data.missingSkills||[]).map(s =>
+    `<span class="skill-tag missing">${s}</span>`).join('') || '<span style="color:var(--accent)">🎉 No gaps!</span>';
+  document.getElementById('resourceGrid').innerHTML = (data.learningResources||[]).map(r => `
+    <div class="resource-card">
+      <div class="resource-skill">${r.skill}</div>
+      <div class="resource-platform">${r.platform}</div>
+      <a href="${r.url}" target="_blank" class="resource-link">${r.url}</a>
+      <div><span class="badge free">${r.type}</span></div>
+    </div>`).join('');
+  document.getElementById('resultsSection').classList.add('visible');
+  document.getElementById('resultsSection').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function loadHistory() {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;font-family:var(--mono)">Loading...</div>';
+  try {
+    const res = await fetch(`${API}/analysis/history`, {headers:{'Authorization':'Bearer '+token}});
+    const data = await res.json();
+    if (!data.length) { list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:3rem">No analyses yet!</div>'; return; }
+    list.innerHTML = data.map(item => {
+      const pct = item.matchPercentage || 0;
+      const color = pct>=70?'var(--accent)':pct>=40?'var(--warn)':'var(--danger)';
+      const date = new Date(item.analyzedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      return `<div class="history-item" onclick="viewItem(${item.id})">
+        <div>
+          <div class="history-title">${item.jobTitle||'Software Engineer'}</div>
+          <div class="history-meta">${date} · ${item.missingSkillsCount} skills to learn</div>
+        </div>
+        <div class="history-pct" style="color:${color}">${pct}%</div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = `<div style="color:var(--danger);text-align:center;padding:2rem">${e.message}</div>`; }
+}
+
+async function viewItem(id) {
+  try {
+    const res = await fetch(`${API}/analysis/${id}`, {headers:{'Authorization':'Bearer '+token}});
+    const data = await res.json();
+    showPage('analyzer');
+    renderResults(data);
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show '+type;
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('loginForm').style.display !== 'none') login();
+    else register();
+  }
+});
+</script>
+</body>
+</html>
